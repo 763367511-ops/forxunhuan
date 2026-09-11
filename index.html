@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>for 循环动画 · 手机版</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --card: #131a2e;
+    --card2: #0f1626;
+    --border: #24304d;
+    --text: #e2e8f0;
+    --muted: #8b98b8;
+    --init: #f59e0b;
+    --cond: #ef4444;
+    --body: #10b981;
+    --upd: #3b82f6;
+    --end: #8b5cf6;
+    --mono: "SFMono-Regular", "JetBrains Mono", Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: radial-gradient(600px 400px at 50% -10%, #1b2a4a 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    min-height: 100vh; padding: 18px 12px 130px;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; }
+
+  .tabs { display: flex; gap: 10px; justify-content: center; margin-bottom: 18px; }
+  .tab {
+    flex: 1; padding: 13px 0; border-radius: 14px; cursor: pointer; font-size: 16px; font-weight: 700;
+    background: var(--card); border: 1px solid var(--border); color: var(--muted); transition: all .2s;
+    text-align: center;
+  }
+  .tab.active { background: linear-gradient(90deg,#3b82f6,#8b5cf6); color: #fff; border-color: transparent; box-shadow: 0 6px 20px rgba(99,102,241,.4); }
+
+  header { text-align: center; margin-bottom: 16px; }
+  header h1 {
+    font-size: 20px; font-weight: 700;
+    background: linear-gradient(90deg,#f59e0b,#ef4444,#10b981,#3b82f6);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  header .sub { color: var(--muted); margin-top: 6px; font-size: 13px; }
+  .code-badge {
+    display: block; margin-top: 12px; padding: 12px 16px; border-radius: 12px;
+    background: #0b1120; border: 1px solid var(--border);
+    font-family: var(--mono); font-size: 15px; line-height: 1.7; color: #fff;
+    text-align: left; overflow-x: auto; white-space: pre;
+  }
+  .code-badge .k { color: #c792ea; }
+  .code-badge .type { color: #82aaff; }
+  .code-badge .var { color: #f78c6c; }
+  .code-badge .num { color: #f59e0b; }
+  .code-badge .op { color: #89ddff; }
+  .code-badge .p { color: #a6accd; }
+  .code-badge .fn { color: #82aaff; }
+  .code-badge .str { color: #c3e88d; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 16px; margin-bottom: 14px;
+    box-shadow: 0 8px 26px rgba(0,0,0,.35);
+  }
+  .card h2 { font-size: 14px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .card h2 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+  .syntax { display: grid; gap: 10px; }
+  .part {
+    border-radius: 12px; padding: 12px 14px; border: 1px solid var(--border); background: var(--card2);
+  }
+  .part .tag { font-size: 12px; font-weight: 700; letter-spacing: .5px; }
+  .part .code { font-family: var(--mono); font-size: 17px; margin: 6px 0 3px; color: #fff; }
+  .part .note { font-size: 12.5px; color: var(--muted); line-height: 1.55; }
+  .part.init { border-color: rgba(245,158,11,.45); }
+  .part.cond { border-color: rgba(239,68,68,.45); }
+  .part.upd  { border-color: rgba(59,130,246,.45); }
+  .part.init .tag { color: var(--init); }
+  .part.cond .tag { color: var(--cond); }
+  .part.upd  .tag { color: var(--upd); }
+
+  .flow { width: 100%; max-width: 360px; height: auto; display: block; margin: 0 auto; }
+  .node-rect, .node-poly, .node-pill { fill: #0f1830; stroke-width: 2; transition: fill .25s, stroke .25s, filter .25s; }
+  .node-rect { stroke: #33405f; }
+  .node-poly { stroke: #33405f; }
+  .node-pill { stroke: #33405f; }
+  .edge { fill: none; stroke: #3a4a6e; stroke-width: 2; transition: stroke .25s, stroke-width .25s; }
+  .nlabel { fill: #dbe4f5; font-size: 13px; font-weight: 700; text-anchor: middle; }
+  .ncode { fill: #9fb0d0; font-size: 12px; text-anchor: middle; font-family: var(--mono); }
+  .elabel { fill: #8b98b8; font-size: 11px; font-weight: 600; }
+
+  .node-rect.active, .node-poly.active, .node-pill.active { stroke-width: 3; }
+  .node-rect.active { stroke: var(--init); fill: rgba(245,158,11,.12); filter: drop-shadow(0 0 8px rgba(245,158,11,.7)); }
+  .node-poly.active { stroke: var(--cond); fill: rgba(239,68,68,.12); filter: drop-shadow(0 0 8px rgba(239,68,68,.7)); }
+  .node-rect.body.active { stroke: var(--body); fill: rgba(16,185,129,.12); filter: drop-shadow(0 0 8px rgba(16,185,129,.7)); }
+  .node-rect.upd.active { stroke: var(--upd); fill: rgba(59,130,246,.12); filter: drop-shadow(0 0 8px rgba(59,130,246,.7)); }
+  .node-pill.active { stroke: var(--end); fill: rgba(139,92,246,.14); filter: drop-shadow(0 0 8px rgba(139,92,246,.7)); }
+
+  .edge.active { stroke-width: 3.5; }
+  .edge.e-ic.active { stroke: var(--init); }
+  .edge.e-cb.active { stroke: var(--body); }
+  .edge.e-bu.active { stroke: var(--upd); }
+  .edge.e-uc.active { stroke: var(--cond); }
+  .edge.e-ce.active { stroke: var(--end); }
+
+  .flowing { stroke-dasharray: 7 8; animation: dashmove .5s linear infinite; }
+  @keyframes dashmove { to { stroke-dashoffset: -15; } }
+
+  .watch { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .var-box {
+    font-family: var(--mono); font-size: 54px; font-weight: 700; color: #fff;
+    background: #0b1120; border: 1px solid var(--border); border-radius: 14px;
+    padding: 6px 28px; min-width: 110px; text-align: center;
+  }
+  .var-box .name { color: #f78c6c; font-size: 26px; }
+  .var-box .eq { color: #8b98b8; font-size: 26px; }
+  .var-box .val { color: #fbbf24; }
+  .var-box.pop .val { animation: pop .35s ease; }
+  @keyframes pop { 0%{ transform: scale(1);} 40%{ transform: scale(1.35); color:#fff;} 100%{ transform: scale(1);} }
+  .watch .hint { font-size: 13px; color: var(--muted); text-align: center; }
+
+  .bars { display: flex; gap: 8px; justify-content: center; }
+  .bar {
+    width: 46px; height: 46px; border-radius: 10px; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-weight: 700; font-size: 18px; color: #55617e;
+    background: var(--card2); transition: all .3s;
+  }
+  .bar.on { background: rgba(16,185,129,.18); border-color: var(--body); color: #34d399; box-shadow: 0 0 12px rgba(16,185,129,.5); }
+  .bar.pulse { border-color: rgba(16,185,129,.55); color: #34d399; background: rgba(16,185,129,.08); animation: pulsebar 1s ease-in-out infinite; }
+  @keyframes pulsebar { 50% { box-shadow: 0 0 16px rgba(16,185,129,.65); } }
+
+  pre.codeblock {
+    background: #070b14; border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 14px; font-family: var(--mono); font-size: 13.5px; line-height: 1.8;
+    color: #c9d6ef; overflow-x: auto; margin: 0; white-space: pre;
+  }
+  pre.codeblock .ln { display: block; padding: 1px 8px; border-radius: 5px; transition: background .2s; }
+  pre.codeblock .ln.hl { background: rgba(16,185,129,.22); box-shadow: inset 3px 0 0 var(--body); }
+  pre.codeblock .c { color: #5b6a8a; }
+  pre.codeblock .kw { color: #c792ea; }
+  pre.codeblock .ty { color: #82aaff; }
+  pre.codeblock .nm { color: #f78c6c; }
+  pre.codeblock .nb { color: #f59e0b; }
+  pre.codeblock .str { color: #c3e88d; }
+  pre.codeblock .fn { color: #82aaff; }
+
+  .console {
+    background: #070b14; border: 1px solid var(--border); border-radius: 12px;
+    font-family: var(--mono); font-size: 19px; line-height: 1.9; padding: 12px 14px;
+    min-height: 80px; color: #c9d6ef; word-break: break-all;
+  }
+  .console .ch { transition: all .2s; }
+  .console .ch.cur { background: rgba(255,255,255,.14); border-radius: 4px; animation: chpop .3s ease; }
+  @keyframes chpop { 0%{ transform: scale(1.4);} 100%{ transform: scale(1);} }
+  .console .cursor { display: inline-block; width: 9px; height: 20px; background: #34d399; vertical-align: -3px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .stat { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
+  .stat b { color: #34d399; }
+
+  .low { display: grid; gap: 14px; }
+  .low .legend { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+
+  .banner {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    border-radius: 14px; padding: 13px 14px; margin-bottom: 14px;
+    background: var(--card); border: 1px solid var(--border); cursor: pointer;
+  }
+  .banner:active { background: #16213c; }
+  .banner .step-no {
+    font-family: var(--mono); font-weight: 700; font-size: 12px; color: #fff;
+    background: #0b1120; border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; white-space: nowrap;
+  }
+  .banner .desc { flex: 1; font-size: 14px; line-height: 1.5; min-width: 200px; }
+  .banner .desc b { font-weight: 700; }
+  .banner .tap-hint { font-size: 11px; color: var(--muted); width: 100%; text-align: right; }
+
+  .controls {
+    position: fixed; left: 12px; right: 12px; bottom: 12px;
+    display: flex; align-items: center; gap: 8px; justify-content: center; flex-wrap: wrap;
+    background: rgba(11,16,32,.95); backdrop-filter: blur(8px);
+    border: 1px solid var(--border); border-radius: 18px; padding: 10px 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.6); z-index: 10; max-width: 480px; margin: 0 auto;
+  }
+  .controls button {
+    border: 1px solid var(--border); background: var(--card2); color: var(--text);
+    border-radius: 12px; padding: 12px 14px; cursor: pointer; font-size: 15px; font-weight: 600;
+    min-height: 46px; transition: all .15s;
+  }
+  .controls button.primary {
+    background: linear-gradient(90deg,#3b82f6,#8b5cf6); border: none; color: #fff;
+    padding: 12px 26px; font-size: 16px;
+  }
+  .controls .speed { display: flex; align-items: center; gap: 6px; }
+  .controls select {
+    background: var(--card2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 8px; font-size: 13px; cursor: pointer; min-height: 46px;
+  }
+  .progress { flex-basis: 100%; height: 8px; background: #0b1120; border-radius: 99px; overflow: hidden; border: 1px solid var(--border); }
+  .progress > span { display: block; height: 100%; background: linear-gradient(90deg,#3b82f6,#8b5cf6); width: 0%; transition: width .25s; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="tabs">
+    <button class="tab active" data-mode="wozuibang">我最棒</button>
+    <button class="tab" data-mode="outputI">输出 i</button>
+  </div>
+
+  <header>
+    <h1>for (int i=1; i&lt;=5; i++)</h1>
+    <p class="sub">逐帧看它怎么循环 · 手机版</p>
+    <pre class="code-badge" id="codeBadge"></pre>
+  </header>
+
+  <div class="card">
+    <h2><span class="dot" style="background:#f59e0b"></span>第一步：拆成三部分</h2>
+    <div class="syntax">
+      <div class="part init">
+        <div class="tag">① 初始化</div>
+        <div class="code">int i = 1</div>
+        <div class="note">定义变量 i = 1，<b style="color:#f59e0b">只执行一次</b>。</div>
+      </div>
+      <div class="part cond">
+        <div class="tag">② 条件</div>
+        <div class="code">i &lt;= 5</div>
+        <div class="note">每次进循环体前判断：<b>i ≤ 5 吗？</b></div>
+      </div>
+      <div class="part upd">
+        <div class="tag">③ 更新</div>
+        <div class="code">i++</div>
+        <div class="note">每次循环后 i 加 1，再回到②。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot" style="background:#3b82f6"></span>第二步：执行流程</h2>
+    <svg class="flow" viewBox="0 0 340 600" role="img" aria-label="for 循环竖向执行流程图">
+      <defs>
+        <marker id="arr-init" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b"/></marker>
+        <marker id="arr-cond" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444"/></marker>
+        <marker id="arr-body" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981"/></marker>
+        <marker id="arr-upd" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6"/></marker>
+        <marker id="arr-end" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#8b5cf6"/></marker>
+      </defs>
+
+      <path class="edge e-ic" id="edge-ic" d="M 170 80 L 170 111" marker-end="url(#arr-init)"/>
+      <path class="edge e-cb" id="edge-cb" d="M 170 197 L 170 228" marker-end="url(#arr-body)"/>
+      <path class="edge e-bu" id="edge-bu" d="M 170 290 L 170 338" marker-end="url(#arr-upd)"/>
+      <path class="edge e-uc" id="edge-uc" d="M 95 370 L 26 370 L 26 155 L 103 155" marker-end="url(#arr-cond)"/>
+      <path class="edge e-ce" id="edge-ce" d="M 235 155 L 294 155 L 294 545 L 222 545" marker-end="url(#arr-end)"/>
+
+      <text class="elabel" x="178" y="216">是 true</text>
+      <text class="elabel" x="243" y="147">否 false</text>
+      <text class="elabel" transform="rotate(-90 20 265)" x="20" y="265">i++ 后回到判断</text>
+
+      <g id="node-init">
+        <rect class="node-rect" x="95" y="20" width="150" height="60" rx="12"/>
+        <text class="nlabel" x="170" y="44">① 初始化</text>
+        <text class="ncode" x="170" y="66">int i = 1</text>
+      </g>
+      <g id="node-cond">
+        <polygon class="node-poly" points="170,113 235,155 170,197 105,155"/>
+        <text class="nlabel" x="170" y="148">② 判断</text>
+        <text class="ncode" x="170" y="166">i &lt;= 5 ?</text>
+      </g>
+      <g id="node-body">
+        <rect class="node-rect body" x="95" y="230" width="150" height="60" rx="12"/>
+        <text class="nlabel" x="170" y="254">③ 循环体</text>
+        <text class="ncode" id="body-iter" x="170" y="276">// 要做的事</text>
+      </g>
+      <g id="node-upd">
+        <rect class="node-rect upd" x="95" y="340" width="150" height="60" rx="12"/>
+        <text class="nlabel" x="170" y="364">④ 更新</text>
+        <text class="ncode" x="170" y="386">i++</text>
+      </g>
+      <g id="node-end">
+        <rect class="node-pill" x="120" y="520" width="100" height="50" rx="25"/>
+        <text class="nlabel" x="170" y="551">结束</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot" style="background:#f78c6c"></span>变量 i 的变化</h2>
+    <div class="watch">
+      <div class="var-box" id="varBox"><span class="name">i</span> <span class="eq">=</span> <span class="val" id="varVal">?</span></div>
+      <div class="hint" id="varHint">循环还没开始</div>
+      <div class="bars">
+        <div class="bar" id="bar1">1</div>
+        <div class="bar" id="bar2">2</div>
+        <div class="bar" id="bar3">3</div>
+        <div class="bar" id="bar4">4</div>
+        <div class="bar" id="bar5">5</div>
+      </div>
+      <div class="hint">已跑完 <b id="doneCount" style="color:#34d399">0</b> / 5 轮循环</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot" style="background:#10b981"></span>循环体里有什么</h2>
+    <pre class="codeblock" id="bodyCode"></pre>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot" style="background:#34d399"></span>程序输出</h2>
+    <div class="stat"><span id="outputHint"></span><span>已输出 <b id="outCount">0</b> / <b id="outTotal">0</b> <span id="outLabel"></span></span></div>
+    <div class="console" id="console"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot" style="background:#8b5cf6"></span>底层原理（语法糖）</h2>
+    <div class="low">
+      <div>
+        <pre class="codeblock" id="whileBlock"></pre>
+        <div class="legend">初始化放最前，条件变成 while 判断，i++ 挪进循环体末尾。</div>
+      </div>
+      <div>
+        <pre class="codeblock" id="asmBlock"></pre>
+        <div class="legend">底层就是比较 + 跳转 + 输出调用 + 加法 + 跳转。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="banner" id="banner">
+    <div class="step-no" id="stepNo">步骤 0</div>
+    <div class="desc" id="desc">点「▶ 播放」或点这里，逐帧演示循环过程。</div>
+    <div class="tap-hint">👆 点这里也可以下一步</div>
+  </div>
+
+</div>
+
+<div class="controls">
+  <button id="btnReset">⏮</button>
+  <button id="btnPrev">◀</button>
+  <button id="btnPlay" class="primary">▶ 播放</button>
+  <button id="btnNext">▶▶</button>
+  <div class="speed">
+    <select id="speed">
+      <option value="1400">慢</option>
+      <option value="900" selected>正常</option>
+      <option value="550">快</option>
+      <option value="330">飞快</option>
+    </select>
+  </div>
+  <div class="progress"><span id="prog"></span></div>
+</div>
+
+<script>
+(function(){
+  const palette = ['#fbbf24','#f472b6','#34d399','#60a5fa','#a78bfa'];
+
+  const SCENARIOS = {
+    wozuibang: {
+      outputTotal: 15, outputLabel: '个字符', outputHint: '依次输出（无换行）',
+      bodyNodeIdle: '// 3 个 cout',
+      exitSummary: '循环体执行了 <b>5</b> 轮，共 15 个字符：「<b style="color:#34d399">我最棒我最棒我最棒我最棒我最棒</b>」。',
+      codeBadge: '<span class="k">for</span><span class="p"> (</span><span class="type">int</span> <span class="var">i</span><span class="op">=</span><span class="num">1</span><span class="p">;</span> <span class="var">i</span><span class="op">&lt;=</span><span class="num">5</span><span class="p">;</span> <span class="var">i</span><span class="op">++</span><span class="p">) {</span>\n  <span class="fn">cout</span><span class="op">&lt;&lt;</span><span class="str">"我"</span><span class="p">;</span>\n  <span class="fn">cout</span><span class="op">&lt;&lt;</span><span class="str">"最"</span><span class="p">;</span>\n  <span class="fn">cout</span><span class="op">&lt;&lt;</span><span class="str">"棒"</span><span class="p">;</span>\n<span class="p">}</span>',
+      bodyCode: '<span class="c">// 每轮执行这 3 条</span>\n<span class="ln" data-b="1"><span class="fn">cout</span>&lt;&lt;<span class="str">"我"</span>;   <span class="c">// 输出「我」</span></span>\n<span class="ln" data-b="2"><span class="fn">cout</span>&lt;&lt;<span class="str">"最"</span>;   <span class="c">// 输出「最」</span></span>\n<span class="ln" data-b="3"><span class="fn">cout</span>&lt;&lt;<span class="str">"棒"</span>;   <span class="c">// 输出「棒」</span></span>',
+      whileCode: '<span class="c">// for 本质是 while</span>\n<span class="ln" data-w="0"><span class="ty">int</span> <span class="nm">i</span> = <span class="nb">1</span>;</span>\n<span class="ln" data-w="1"><span class="kw">while</span> (<span class="nm">i</span> &lt;= <span class="nb">5</span>) {</span>\n<span class="ln" data-w="2">  <span class="fn">cout</span>&lt;&lt;<span class="str">"我"</span>;</span>\n<span class="ln" data-w="3">  <span class="fn">cout</span>&lt;&lt;<span class="str">"最"</span>;</span>\n<span class="ln" data-w="4">  <span class="fn">cout</span>&lt;&lt;<span class="str">"棒"</span>;</span>\n<span class="ln" data-w="5">  <span class="nm">i</span>++;</span>\n<span class="ln" data-w="6">}</span>',
+      asmCode: '<span class="c">; x86 简化版</span>\n<span class="ln" data-a="0">mov  esi, <span class="nb">1</span>      <span class="c">; i = 1</span></span>\n<span class="ln" data-a="1">.L1:             <span class="c">; 入口</span></span>\n<span class="ln" data-a="2">cmp  esi, <span class="nb">5</span>      <span class="c">; 比较 i 和 5</span></span>\n<span class="ln" data-a="3">jg   .L2         <span class="c">; i&gt;5 结束</span></span>\n<span class="ln" data-a="4">call print(<span class="str">"我"</span>)</span>\n<span class="ln" data-a="5">call print(<span class="str">"最"</span>)</span>\n<span class="ln" data-a="6">call print(<span class="str">"棒"</span>)</span>\n<span class="ln" data-a="7">add  esi, <span class="nb">1</span>      <span class="c">; i++</span></span>\n<span class="ln" data-a="8">jmp  .L1         <span class="c">; 跳回判断</span></span>\n<span class="ln" data-a="9">.L2:             <span class="c">; 结束</span></span>',
+      bodyDefs: [
+        { code: 'cout<<"我";', payload:'我', newline:false },
+        { code: 'cout<<"最";', payload:'最', newline:false },
+        { code: 'cout<<"棒";', payload:'棒', newline:false }
+      ]
+    },
+    outputI: {
+      outputTotal: 5, outputLabel: '个数字', outputHint: '每轮输出 i 并换行',
+      bodyNodeIdle: '// 1 个 cout',
+      exitSummary: '循环体执行了 <b>5</b> 轮，每轮输出一次 i 并换行：<b style="color:#34d399">1 2 3 4 5</b>（每行一个）。',
+      codeBadge: '<span class="k">for</span><span class="p"> (</span><span class="type">int</span> <span class="var">i</span><span class="op">=</span><span class="num">1</span><span class="p">;</span> <span class="var">i</span><span class="op">&lt;=</span><span class="num">5</span><span class="p">;</span> <span class="var">i</span><span class="op">++</span><span class="p">) {</span>\n  <span class="fn">cout</span><span class="op">&lt;&lt;</span><span class="var">i</span><span class="op">&lt;&lt;</span><span class="fn">endl</span><span class="p">;</span>\n<span class="p">}</span>',
+      bodyCode: '<span class="c">// 只有一条：输出 i 再换行</span>\n<span class="ln" data-b="1"><span class="fn">cout</span>&lt;&lt;<span class="var">i</span>&lt;&lt;<span class="fn">endl</span>;   <span class="c">// endl = 换行</span></span>',
+      whileCode: '<span class="c">// for 本质是 while</span>\n<span class="ln" data-w="0"><span class="ty">int</span> <span class="nm">i</span> = <span class="nb">1</span>;</span>\n<span class="ln" data-w="1"><span class="kw">while</span> (<span class="nm">i</span> &lt;= <span class="nb">5</span>) {</span>\n<span class="ln" data-w="2">  <span class="fn">cout</span>&lt;&lt;<span class="nm">i</span>&lt;&lt;<span class="fn">endl</span>;</span>\n<span class="ln" data-w="3">  <span class="nm">i</span>++;</span>\n<span class="ln" data-w="4">}</span>',
+      asmCode: '<span class="c">; x86 简化版</span>\n<span class="ln" data-a="0">mov  esi, <span class="nb">1</span>      <span class="c">; i = 1</span></span>\n<span class="ln" data-a="1">.L1:             <span class="c">; 入口</span></span>\n<span class="ln" data-a="2">cmp  esi, <span class="nb">5</span>      <span class="c">; 比较 i 和 5</span></span>\n<span class="ln" data-a="3">jg   .L2         <span class="c">; i&gt;5 结束</span></span>\n<span class="ln" data-a="4">call println(esi)<span class="c">; 输出 i</span></span>\n<span class="ln" data-a="5">add  esi, <span class="nb">1</span>      <span class="c">; i++</span></span>\n<span class="ln" data-a="6">jmp  .L1         <span class="c">; 跳回判断</span></span>\n<span class="ln" data-a="7">.L2:             <span class="c">; 结束</span></span>',
+      bodyDefs: [
+        { code: 'cout<<i<<endl;', payload:null, newline:true }
+      ]
+    }
+  };
+
+  let scenario = null, steps = [], cur = -1, playing = false, timer = null;
+  const $ = id => document.getElementById(id);
+  const varVal = $('varVal'), varBox = $('varBox'), varHint = $('varHint');
+  const bodyIter = $('body-iter'), consoleEl = $('console');
+  const stepNo = $('stepNo'), desc = $('desc'), prog = $('prog');
+  const doneCount = $('doneCount'), outCount = $('outCount');
+  const btnPlay = $('btnPlay'), speedSel = $('speed');
+  const nodeIds = ['node-init','node-cond','node-body','node-upd','node-end'];
+  const edgeIds = ['edge-ic','edge-cb','edge-bu','edge-uc','edge-ce'];
+
+  function buildSteps(sc){
+    const s = [];
+    s.push({ t:'init', i:1, iter:0 });
+    for (let k = 1; k <= 5; k++) {
+      s.push({ t:'check', i:k, iter:k, result:true });
+      sc.bodyDefs.forEach((def, idx) => {
+        s.push({ t:'cout', i:k, iter:k, n:idx+1, code:def.code, payload: def.payload === null ? k : def.payload, newline:def.newline });
+      });
+      s.push({ t:'update', i:k+1, iter:k });
+    }
+    s.push({ t:'check', i:6, iter:6, result:false });
+    s.push({ t:'exit',  i:6, iter:0 });
+    return s;
+  }
+
+  function clearActive(){
+    nodeIds.forEach(id => $(id).querySelector('rect, polygon')?.classList.remove('active'));
+    edgeIds.forEach(id => $(id).classList.remove('active','flowing'));
+  }
+  function setActive(map){
+    clearActive();
+    (map.nodes||[]).forEach(n => $(n).querySelector('rect, polygon')?.classList.add('active'));
+    (map.edges||[]).forEach(e => $(e)?.classList.add('active','flowing'));
+  }
+  function stepMap(s){
+    switch (s.t) {
+      case 'init':   return { nodes:['node-init'], edges:['edge-ic'] };
+      case 'check':  return s.result ? { nodes:['node-cond'], edges:['edge-cb'] } : { nodes:['node-cond'], edges:['edge-ce'] };
+      case 'cout':   return { nodes:['node-body'], edges:['edge-bu'] };
+      case 'update': return { nodes:['node-upd'], edges:['edge-uc'] };
+      case 'exit':   return { nodes:['node-end'], edges:[] };
+    }
+  }
+  function countType(index, t){ let c=0; for (let i=0;i<=index;i++) if (steps[i].t===t) c++; return c; }
+  function highlightLines(blockId, key, val){
+    const block = $(blockId);
+    block.querySelectorAll('.ln').forEach(ln => ln.classList.remove('hl'));
+    if (val == null) return;
+    const set = (''+val).split(',');
+    block.querySelectorAll('.ln['+key+']').forEach(ln => { if (set.includes(ln.getAttribute(key))) ln.classList.add('hl'); });
+  }
+  function lowMap(s){
+    const bodyCount = scenario.bodyDefs.length;
+    switch (s.t) {
+      case 'init':   return { w:'0', a:'0' };
+      case 'check':  return s.result ? { w:'1', a:'2' } : { w:'1', a:'2,3' };
+      case 'cout':   return { w:String(1+s.n), a:String(3+s.n) };
+      case 'update': return { w:String(2+bodyCount), a:String(4+bodyCount)+','+String(5+bodyCount) };
+      case 'exit':   return { w:String(3+bodyCount), a:String(6+bodyCount) };
+    }
+  }
+  function esc(code){ return code.replace(/</g, '&lt;'); }
+  function descFor(s){
+    switch (s.t) {
+      case 'init':   return '<b style="color:#f59e0b">① 初始化：</b>i = 1，只执行一次。';
+      case 'check':  return s.result ? '<b style="color:#ef4444">② 判断：</b>i（='+s.i+'）≤ 5？成立 <b style="color:#10b981">true</b>。' : '<b style="color:#ef4444">② 判断：</b>i（=6）≤ 5？不成立 <b style="color:#8b5cf6">false</b>，跳出。';
+      case 'cout':   return '<b style="color:#10b981">③ 循环体</b>（第 '+s.iter+' 轮）：<span style="font-family:var(--mono)">'+esc(s.code)+'</span> 输出「<b style="color:#34d399">'+s.payload+'</b>」'+(s.newline?' 并换行':'')+'。';
+      case 'update': return '<b style="color:#3b82f6">④ 更新：</b>i++，i 从 '+s.iter+' 变 <b>'+(s.iter+1)+'</b>，回到②。';
+      case 'exit':   return '<b style="color:#8b5cf6">循环结束：</b>' + scenario.exitSummary;
+    }
+  }
+  function executedCouts(index){ const out=[]; for (let i=0;i<=index;i++) if (steps[i].t==='cout') out.push(steps[i]); return out; }
+  function renderConsole(list){
+    if (!list.length) { consoleEl.innerHTML = '<span style="color:#55617e;font-size:15px">// 还没输出，等待进入循环体…</span>'; return; }
+    let html='';
+    list.forEach((s, idx) => {
+      const color = palette[(s.iter-1) % 5];
+      const isLast = idx === list.length-1;
+      html += '<span class="ch'+(isLast?' cur':'')+'" style="color:'+color+'">'+s.payload+'</span>';
+      if (s.newline) html += '<br>';
+    });
+    html += '<span class="cursor"></span>';
+    consoleEl.innerHTML = html;
+  }
+
+  function render(){
+    if (cur < 0) {
+      clearActive();
+      varVal.textContent = '?'; varHint.textContent = '循环还没开始';
+      bodyIter.textContent = scenario.bodyNodeIdle;
+      stepNo.textContent = '步骤 0 / ' + steps.length;
+      desc.innerHTML = '点「▶ 播放」或点这里，逐帧演示循环过程。';
+      prog.style.width = '0%'; doneCount.textContent = '0'; outCount.textContent = '0';
+      renderConsole([]);
+      highlightLines('bodyCode', null, null); highlightLines('whileBlock', null, null); highlightLines('asmBlock', null, null);
+      for (let i=1;i<=5;i++){ const b=$('bar'+i); b.classList.remove('on','pulse'); }
+      return;
+    }
+    const s = steps[cur];
+    setActive(stepMap(s));
+    if (s.t === 'update') {
+      varVal.textContent = (s.i-1) + ' → ' + s.i;
+      varHint.textContent = 'i++：' + (s.i-1) + ' → ' + s.i;
+    } else {
+      varVal.textContent = s.i;
+      if (s.t === 'init') varHint.textContent = '初始化完成';
+      else if (s.t === 'check') varHint.textContent = s.result ? '条件成立，继续' : '条件不成立，退出';
+      else if (s.t === 'cout') varHint.textContent = '第 ' + s.iter + ' 轮 · 输出「' + s.payload + '」' + (s.newline?' + 换行':'');
+      else varHint.textContent = '循环结束';
+    }
+    varBox.classList.remove('pop'); void varBox.offsetWidth; varBox.classList.add('pop');
+
+    if (s.t === 'cout') { bodyIter.textContent = s.code; highlightLines('bodyCode','data-b',s.n); }
+    else { bodyIter.textContent = (s.t==='check'||s.t==='update') ? (scenario.bodyDefs.length>1?'输出「我最棒」':'输出 i + 换行') : scenario.bodyNodeIdle; highlightLines('bodyCode', null, null); }
+
+    const couts = executedCouts(cur);
+    renderConsole(couts); outCount.textContent = couts.length;
+    const completed = countType(cur,'update'); doneCount.textContent = completed;
+    const currentIter = (s.iter>=1 && s.iter<=5) ? s.iter : 0;
+    for (let j=1;j<=5;j++){ const b=$('bar'+j); b.classList.remove('on','pulse'); if (j<=completed) b.classList.add('on'); else if (j===currentIter) b.classList.add('pulse'); }
+
+    const lm = lowMap(s);
+    highlightLines('whileBlock','data-w',lm.w); highlightLines('asmBlock','data-a',lm.a);
+    stepNo.textContent = '步骤 ' + (cur+1) + ' / ' + steps.length;
+    desc.innerHTML = descFor(s);
+    prog.style.width = ((cur+1)/steps.length*100) + '%';
+  }
+
+  function applyScenario(mode){
+    scenario = SCENARIOS[mode]; steps = buildSteps(scenario);
+    $('codeBadge').innerHTML = scenario.codeBadge;
+    $('bodyCode').innerHTML = scenario.bodyCode;
+    $('whileBlock').innerHTML = scenario.whileCode;
+    $('asmBlock').innerHTML = scenario.asmCode;
+    $('outputHint').textContent = scenario.outputHint;
+    $('outTotal').textContent = scenario.outputTotal;
+    $('outLabel').textContent = scenario.outputLabel;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+    pause(); cur = -1; render();
+  }
+
+  function goTo(idx){ cur = Math.max(-1, Math.min(steps.length-1, idx)); render(); if (cur === steps.length-1) pause(); }
+  function next(){ if (cur < steps.length-1) goTo(cur+1); else pause(); }
+  function prev(){ goTo(cur-1); }
+  function play(){
+    if (cur >= steps.length-1) cur = -1;
+    if (playing) return;
+    playing = true; btnPlay.textContent = '⏸ 暂停';
+    timer = setInterval(() => { if (cur < steps.length-1) next(); else pause(); }, parseInt(speedSel.value, 10));
+  }
+  function pause(){ playing = false; if (timer){ clearInterval(timer); timer=null; } btnPlay.textContent = '▶ 播放'; }
+  function toggle(){ playing ? pause() : play(); }
+
+  $('btnPlay').addEventListener('click', toggle);
+  $('btnNext').addEventListener('click', () => { pause(); next(); });
+  $('btnPrev').addEventListener('click', () => { pause(); prev(); });
+  $('btnReset').addEventListener('click', () => { pause(); goTo(-1); });
+  $('banner').addEventListener('click', () => { pause(); next(); });
+  speedSel.addEventListener('change', () => { if (playing){ pause(); play(); } });
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => applyScenario(t.dataset.mode)));
+
+  applyScenario('wozuibang');
+})();
+</script>
+</body>
+</html>
